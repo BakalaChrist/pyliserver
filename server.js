@@ -31,7 +31,7 @@ app.get('/', (req, res) => {
     res.send("ok");
 });
 
-//PROFILE
+//PROFILE CRUD
 app.post('/add-profile', (req, res) => {
     const values = [
         req.body.libelle,
@@ -71,7 +71,7 @@ app.get('/add-profile', (req, res) => {
 });
 //FIN PROFILE
 
-//USER
+//USER CRUD
 app.post('/add-user', (req, res) => {
     const values = [
         req.body.last_name,
