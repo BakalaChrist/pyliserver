@@ -20,6 +20,15 @@ app.use(bodyParser.urlencoded({extended: false}));
 app.use(cookieParser());
 app.use(bodyParser.json());
 
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'public/profiles')
+      },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname)
+      }
+});
+
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
@@ -117,10 +126,34 @@ app.post('/edit-user/:id', (req, res) => {
     const sql ="UPDATE user SET `nom`=?, `prenom`=?, `telephone`=?, `id_pays`=?, `id_ville`=?, `genre`=? WHERE id_user=?";
     const id = req.params.id;
 
-    db.query(sql, [req.body.last_name, req.body.first_name, req.body.phone, req.body.country, req.body.city, req.body.genre ,id ],
+    db.query(sql, [req.body.last_name, req.body.first_name, req.body.phone, req.body.country, req.body.city, req.body.gender ,id ],
         (err, result) => {
             if(err) return res.json({message: "Une erreur est survenue !", valid: false});
             return res.json({message: "User added successfull !", valid: true});
+    });
+});
+
+app.post('/edit-pass/:id', (req, res) => {
+  
+    const sql ="UPDATE user SET `password`=? WHERE id_user=?";
+    const id = req.params.id;
+
+    db.query(sql, [req.body.pass,id ],
+        (err, result) => {
+            if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+            return res.json({message: "Password updated successfull !", valid: true});
+    });
+});
+
+app.post('/edit-email/:id', (req, res) => {
+  
+    const sql ="UPDATE user SET `email`=? WHERE id_user=?";
+    const id = req.params.id;
+
+    db.query(sql, [req.body.email,id ],
+        (err, result) => {
+            if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+            return res.json({message: "Password updated successfull !", valid: true});
     });
 });
 
@@ -132,6 +165,32 @@ app.post('/delete_user/:id', (req, res) => {
             return res.json({message: "User deleted successfull !", valid: true});
     });
 });
+
+app.post('/change-profile/:id', (req, res) => {
+    
+    let upload = multer({ storage: storage}).single('image');
+     upload(req, res, function (err) {
+         if (!req.file) {
+           return res.send({message: 'Please select an image to upload', valid: false});
+         } else if (err instanceof multer.MulterError) {
+           return res.send(err);
+         }else if(err){
+             return res.send(err);
+         }
+     
+        const sql ="UPDATE user SET `image_profil`=? WHERE id_user=?";
+        const id = req.params.id;
+
+        db.query(sql, [req.file.filename,id ],
+            (err, result) => {
+                if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+                return res.json({message: "Profile updated successfull !", valid: true});
+        });
+         //console.log(req.file);
+         
+       });
+     
+ });
 
 //FIN USER
 
