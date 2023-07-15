@@ -38,6 +38,15 @@ const stores = multer.diskStorage({
       }
 });
 
+var posts = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'public/posts')
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname)
+    }
+});
+
 const db = mysql.createConnection({
     host: "localhost",
     user: "root",
@@ -293,6 +302,147 @@ app.post('/edit-store/:id', (req, res) => {
     });
 });
 //FIN STORE
+
+//POST CRUD
+app.post('/add-post', (req, res) => {
+    
+    let upload = multer({ storage: posts}).array('image', 12);
+    upload(req, res, function (err) {
+
+        if (!req.files) {
+          return res.send('Please select an image to upload');
+        } else if (err instanceof multer.MulterError) {
+          return res.send(err);
+        }else if(err){
+            return res.send(err);
+        }
+
+        var lastId = 0;
+        const values = [
+            req.body.title,
+            Date.now(),
+            1, //source
+            0, //type post
+            "localite",
+            req.body.desc,
+            6, //id_user
+            req.body.category,
+        ];
+
+        const sql = "INSERT INTO post (titre_post, date_post, source_post, type_post, localite_post, description_post, id_user, id_categorie) VALUES (?)";
+        db.query(sql, [values], (err, result) => {
+            if(err) return res.json(err);
+
+            if(req.files.length > 0){
+                for(var i=0; i < req.files.length; i++){
+                    //console.log("lastId: "+lastId);
+                    //console.log(req.files[i].filename+" "+ i +"***********************");
+    
+                    const sql2 = "INSERT INTO image (photo, rang, id_post, date_creation) VALUES (?)";
+                    const values2 = [
+                        req.files[i].filename,
+                        i,
+                        result.insertId,
+                        Date.now(),
+                    ];
+            
+                    db.query(sql2, [values2], (err2, result2) => {
+                        
+                    });
+    
+                }
+            }
+            return res.json(result);
+        });
+
+      });    
+});
+
+app.get('/get-posts', (req, res) => {
+    const sql = "SELECT * FROM post";
+    db.query(sql, (err, result) => {
+        if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+        return res.json({result:result, valid: true});
+    });
+});
+
+app.post('/delete-post/:id', (req, res) => {
+    const sql = "DELETE FROM post WHERE id_post=?";
+    const id = req.params.id;
+    db.query(sql, [id], (err, result) => {
+        if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+            return res.json({message: "Post deleted successfull !", valid: true});
+    });
+});
+
+app.get('/details-post/:id', (req, res) => {
+    const sql = "SELECT * FROM post WHERE id_post = ?";
+    const id = req.params.id;
+
+    db.query(sql, [id], (err, result) =>{
+        if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+        return res.json({result:result, valid: true});
+    })
+});
+
+app.post('/edit-post/:id', (req, res) => {
+    
+    const sql ="UPDATE post SET `titre_post`=?, `description_post`=?, `id_categorie`=? WHERE id_post=?";
+    const id = req.params.id;
+
+    db.query(sql, [req.body.title, req.body.desc, req.body.category, id ],
+        (err, result) => {
+            if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+            return res.json({message: "Post updated successfull !", valid: true});
+    });    
+ });
+
+//END POST
+
+//FILES(IMAGES, VIDEO, PDF) CRUD
+app.get('/get-posts-files/:id', (req, res) => {
+    const sql = "SELECT * FROM image WHERE id_post = ?";
+    const id = req.params.id;
+
+    db.query(sql, [id], (err, result) =>{
+        if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+        return res.json({result:result, valid: true});
+    })
+});
+
+app.post('/edit-image/:id', (req, res) => {
+    
+    let upload = multer({ storage: posts}).single('image');
+     upload(req, res, function (err) {
+         if (!req.file) {
+           return res.send({message: 'Please select an image to upload', valid: false});
+         } else if (err instanceof multer.MulterError) {
+           return res.send(err);
+         }else if(err){
+             return res.send(err);
+         }
+         
+        const sql ="UPDATE image SET `photo`=? WHERE id_image=?";
+        const id = req.params.id;
+         
+        db.query(sql, [req.file.filename, id ],
+            (err, result) => {
+                if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+                return res.json({message: "Image updated successfull !", valid: true});
+        });
+         
+       });   
+ });
+
+ app.post('/delete-image/:id', (req, res) => {
+    const sql = "DELETE FROM image WHERE id_image=?";
+    const id = req.params.id;
+    db.query(sql, [id], (err, result) => {
+        if(err) return res.json({message: "Une erreur est survenue !", valid: false});
+            return res.json({message: "Image deleted successfull !", valid: true});
+    });
+});
+//END FILES
 
 
 app.listen(8002, () => {
